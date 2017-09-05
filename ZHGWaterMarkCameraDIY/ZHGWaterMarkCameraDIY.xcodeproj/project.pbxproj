@@ -15,6 +15,7 @@
 		3E85C4E61F5E31BC00FE129C /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 3E85C4E41F5E31BC00FE129C /* LaunchScreen.storyboard */; };
 		3E85C4F11F5E31BC00FE129C /* ZHGWaterMarkCameraDIYTests.m in Sources */ = {isa = PBXBuildFile; fileRef = 3E85C4F01F5E31BC00FE129C /* ZHGWaterMarkCameraDIYTests.m */; };
 		3E85C4FC1F5E31BD00FE129C /* ZHGWaterMarkCameraDIYUITests.m in Sources */ = {isa = PBXBuildFile; fileRef = 3E85C4FB1F5E31BD00FE129C /* ZHGWaterMarkCameraDIYUITests.m */; };
+		3E85C50B1F5E326800FE129C /* ZHGWaterMarkCameraVC.m in Sources */ = {isa = PBXBuildFile; fileRef = 3E85C50A1F5E326700FE129C /* ZHGWaterMarkCameraVC.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -51,6 +52,8 @@
 		3E85C4F71F5E31BD00FE129C /* ZHGWaterMarkCameraDIYUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ZHGWaterMarkCameraDIYUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3E85C4FB1F5E31BD00FE129C /* ZHGWaterMarkCameraDIYUITests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ZHGWaterMarkCameraDIYUITests.m; sourceTree = "<group>"; };
 		3E85C4FD1F5E31BD00FE129C /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		3E85C5091F5E326700FE129C /* ZHGWaterMarkCameraVC.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ZHGWaterMarkCameraVC.h; sourceTree = "<group>"; };
+		3E85C50A1F5E326700FE129C /* ZHGWaterMarkCameraVC.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ZHGWaterMarkCameraVC.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -105,6 +108,8 @@
 				3E85C4DA1F5E31BC00FE129C /* AppDelegate.m */,
 				3E85C4DC1F5E31BC00FE129C /* ViewController.h */,
 				3E85C4DD1F5E31BC00FE129C /* ViewController.m */,
+				3E85C5091F5E326700FE129C /* ZHGWaterMarkCameraVC.h */,
+				3E85C50A1F5E326700FE129C /* ZHGWaterMarkCameraVC.m */,
 				3E85C4DF1F5E31BC00FE129C /* Main.storyboard */,
 				3E85C4E21F5E31BC00FE129C /* Assets.xcassets */,
 				3E85C4E41F5E31BC00FE129C /* LaunchScreen.storyboard */,
@@ -278,6 +283,7 @@
 			files = (
 				3E85C4DE1F5E31BC00FE129C /* ViewController.m in Sources */,
 				3E85C4DB1F5E31BC00FE129C /* AppDelegate.m in Sources */,
+				3E85C50B1F5E326800FE129C /* ZHGWaterMarkCameraVC.m in Sources */,
 				3E85C4D81F5E31BC00FE129C /* main.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
