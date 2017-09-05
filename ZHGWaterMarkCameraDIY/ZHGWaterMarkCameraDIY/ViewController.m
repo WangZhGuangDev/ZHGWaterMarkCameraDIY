@@ -13,7 +13,8 @@
 
 #import "ZHGWaterMarkCameraVC.h"
 
-@interface ViewController ()
+@interface ViewController ()<ZHGWaterMarkCameraVCDelegate>
+@property (weak, nonatomic) IBOutlet UIImageView *imageView;
 
 @end
 
@@ -28,15 +29,17 @@
     
     if ([self isCameraValid]) {
         ZHGWaterMarkCameraVC *cameraVC = [[ZHGWaterMarkCameraVC alloc] init];
-        
+        cameraVC.delegate = self;
         [self presentViewController:cameraVC animated:YES completion:nil];
     } else {
         [self alertWithTitle:@"提示" message:@"无访问相机权限，请去设置里设置" OKTitle:@"确定" isNeedCancel:NO cancelSEL:nil handle:nil];
 
     }
-    
-    
-    
+}
+
+
+-(void)cameraViwe:(ZHGWaterMarkCameraVC *)cameraViwe image:(UIImage *)image {
+    [self.imageView setImage:image];
 }
 
 

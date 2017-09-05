@@ -12,7 +12,6 @@
 #import <AssetsLibrary/AssetsLibrary.h>
 #import <Photos/Photos.h>
 
-//#import "NSDate+Category.h"
 
 #define kScreenBounds   [UIScreen mainScreen].bounds
 #define kScreenWidth  [UIScreen mainScreen].bounds.size.width
@@ -20,11 +19,11 @@
 
 #define kSystemVersion [[[UIDevice currentDevice] systemVersion] floatValue]
 
-@interface ZHGWaterMarkCameraVC ()<UIGestureRecognizerDelegate>
+@interface ZHGWaterMarkCameraVC ()<UIGestureRecognizerDelegate,AVCapturePhotoCaptureDelegate>
 
 //界面控件
 @property (strong, nonatomic)  UIButton *flashButton;
-
+@property (nonatomic, strong) AVCapturePhotoSettings *photoSettings;
 /**
  *  切换摄像头按钮
  */
@@ -55,7 +54,7 @@
 /**
  *  照片输出流
  */
-//@property (nonatomic, strong) AVCapturePhotoOutput* stillImageOutput;
+@property (nonatomic, strong) AVCapturePhotoOutput* photoOutput;
 
 /**
  *  预览图层
@@ -135,24 +134,13 @@
     }
 }
 
-- (void)viewDidAppear:(BOOL)animated{
-    
-    [super viewDidAppear:animated];
-
-//    if (kSystemVersion <= 9.0) {
-//        [[UIApplication sharedApplication] setStatusBarHidden:YES];
-//    }
-
-}
-
+/**
+ 隐藏导航栏
+ */
 -(BOOL)prefersStatusBarHidden {
     return YES;
 }
 
-
--(void)viewWillDisappear:(BOOL)animated {
-    [[UIApplication sharedApplication] setStatusBarHidden:NO];
-}
 
 - (void)customUI{
     
@@ -387,6 +375,14 @@
     return (interfaceOrientation == UIInterfaceOrientationPortrait);
 }
 
+-(AVCapturePhotoSettings *)photoSettings {
+    if (!_photoSettings) {
+        _photoSettings = [AVCapturePhotoSettings photoSettings];
+        _photoSettings.flashMode = AVCaptureFlashModeAuto;
+    }
+    return _photoSettings;
+}
+
 #pragma mark private method
 - (void)initAVCaptureSession{
     
@@ -395,28 +391,39 @@
     NSError *error;
     
     self.device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
-    
-    //更改这个设置的时候必须先锁定设备，修改完后再解锁，否则崩溃
+
+    //更改这个设置的时候必须先锁定设备，修改完后再解锁，否则崩溃（iOS10之前）
     [self.device lockForConfiguration:nil];
     //设置闪光灯为自动
-    [self.device setFlashMode:AVCaptureFlashModeAuto];
+    if (kSystemVersion < 10.0) {
+        [self.device setFlashMode:AVCaptureFlashModeAuto];
+    }
     [self.device unlockForConfiguration];
     
     self.videoInput = [[AVCaptureDeviceInput alloc] initWithDevice:self.device error:&error];
     if (error) {
         NSLog(@"%@",error);
     }
-    self.stillImageOutput = [[AVCaptureStillImageOutput alloc] init];
-    //输出设置。AVVideoCodecJPEG   输出jpeg格式图片
-    NSDictionary * outputSettings = [[NSDictionary alloc] initWithObjectsAndKeys:AVVideoCodecJPEG,AVVideoCodecKey, nil];
-    [self.stillImageOutput setOutputSettings:outputSettings];
+    
+
+    if (kSystemVersion < 10.0) {
+        self.stillImageOutput = [[AVCaptureStillImageOutput alloc] init];
+        NSDictionary * outputSettings = [[NSDictionary alloc] initWithObjectsAndKeys:AVVideoCodecJPEG,AVVideoCodecKey, nil];
+        [self.stillImageOutput setOutputSettings:outputSettings];
+    } else {
+        self.photoOutput = [[AVCapturePhotoOutput alloc] init];
+    }
+    
+    
     
     if ([self.session canAddInput:self.videoInput]) {
         [self.session addInput:self.videoInput];
     }
-    if ([self.session canAddOutput:self.stillImageOutput]) {
-        [self.session addOutput:self.stillImageOutput];
+    if ([self.session canAddOutput:(kSystemVersion < 10.0 ? self.stillImageOutput : self.photoOutput)]) {
+        [self.session addOutput:(kSystemVersion < 10.0 ? self.stillImageOutput : self.photoOutput)];
     }
+    
+    
     
     //初始化预览图层
     self.previewLayer = [[AVCaptureVideoPreviewLayer alloc] initWithSession:self.session];
@@ -460,10 +467,15 @@
 //切换镜头
 - (void)switchCameraSegmentedControlClick:(UIButton *)sender {
     
-    AVCaptureDeviceDiscoverySession *deviceSession = [AVCaptureDeviceDiscoverySession discoverySessionWithDeviceTypes:@[AVCaptureDeviceTypeBuiltInWideAngleCamera] mediaType:AVMediaTypeVideo position:AVCaptureDevicePositionUnspecified];
     
-//    NSUInteger cameraCount = [[AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo] count];
-    NSUInteger cameraCount = [deviceSession.devices count];
+    NSUInteger cameraCount = 0;
+    if (kSystemVersion < 10.0) {
+        cameraCount = [[AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo] count];
+    } else {
+        AVCaptureDeviceDiscoverySession *deviceSession = [AVCaptureDeviceDiscoverySession discoverySessionWithDeviceTypes:@[AVCaptureDeviceTypeBuiltInWideAngleCamera] mediaType:AVMediaTypeVideo position:AVCaptureDevicePositionUnspecified];
+
+        cameraCount = [deviceSession.devices count];
+    }
 
     if (cameraCount > 1) {
         NSError *error;
@@ -507,15 +519,17 @@
 }
 
 - (AVCaptureDevice *)cameraWithPosition:(AVCaptureDevicePosition)position{
-//    NSArray *devices = [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo];
-//    for ( AVCaptureDevice *device in devices )
-//        if ( device.position == position ) return device;
-//    return nil;
-    
-    AVCaptureDeviceDiscoverySession *deviceSession = [AVCaptureDeviceDiscoverySession discoverySessionWithDeviceTypes:@[AVCaptureDeviceTypeBuiltInWideAngleCamera] mediaType:AVMediaTypeVideo position:position];
-    for ( AVCaptureDevice *device in deviceSession.devices )
-        if ( device.position == position ) return device;
-    return nil;
+    if (kSystemVersion < 10.0) {
+        NSArray *devices = [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo];
+        for ( AVCaptureDevice *device in devices )
+            if ( device.position == position ) return device;
+        return nil;
+    } else {
+        AVCaptureDeviceDiscoverySession *deviceSession = [AVCaptureDeviceDiscoverySession discoverySessionWithDeviceTypes:@[AVCaptureDeviceTypeBuiltInWideAngleCamera] mediaType:AVMediaTypeVideo position:position];
+        for ( AVCaptureDevice *device in deviceSession.devices )
+            if ( device.position == position ) return device;
+        return nil;
+    }
 }
 
 - (void)takePhotoButtonClick:(UIButton *)sender {
@@ -526,22 +540,81 @@
     self.switchButton.hidden = YES;
     [self.leftButon setTitle:@"重拍" forState:(UIControlStateNormal)];
     sender.hidden = YES;
-    AVCaptureConnection *stillImageConnection = [self.stillImageOutput connectionWithMediaType:AVMediaTypeVideo];
+    AVCaptureConnection *stillImageConnection = [(kSystemVersion < 10.0 ? self.stillImageOutput : self.photoOutput) connectionWithMediaType:AVMediaTypeVideo];
+    
     UIDeviceOrientation curDeviceOrientation = [[UIDevice currentDevice] orientation];
     AVCaptureVideoOrientation avcaptureOrientation = [self avOrientationForDeviceOrientation:curDeviceOrientation];
     [stillImageConnection setVideoOrientation:avcaptureOrientation];
     [stillImageConnection setVideoScaleAndCropFactor:self.effectiveScale];
     
-    [self.stillImageOutput captureStillImageAsynchronouslyFromConnection:stillImageConnection completionHandler:^(CMSampleBufferRef imageDataSampleBuffer, NSError *error) {
-        
-        if (imageDataSampleBuffer == NULL) {
-            return ;
+    if (kSystemVersion < 10.0) {
+        [self.stillImageOutput captureStillImageAsynchronouslyFromConnection:stillImageConnection completionHandler:^(CMSampleBufferRef imageDataSampleBuffer, NSError *error) {
+    
+            if (imageDataSampleBuffer == NULL) {
+                return ;
+            }
+    
+            NSData *jpegData = [AVCaptureStillImageOutput jpegStillImageNSDataRepresentation:imageDataSampleBuffer];
+    
+            UIImage *image = [UIImage imageWithData:jpegData];
+    
+            self.image = [self drawMarkImage:image martText:nil rect:kScreenBounds];
+    
+            [self.session stopRunning];
+            self.imageView = [[UIImageView alloc]initWithFrame:self.previewLayer.frame];
+            [self.view insertSubview:_imageView belowSubview:_topBlackView];
+            self.imageView.layer.masksToBounds = YES;
+            self.imageView.image = image;
+            // 1. 获取当前App的相册授权状态
+            PHAuthorizationStatus authorizationStatus = [PHPhotoLibrary authorizationStatus];
+    
+            // 2. 判断授权状态
+            if (authorizationStatus == PHAuthorizationStatusAuthorized) {
+                
+                // 2.1 如果已经授权, 保存图片(调用步骤2的方法)
+                [self saveImageToPhotoAlbum:image];
+                
+            } else if (authorizationStatus == PHAuthorizationStatusNotDetermined) { // 如果没决定, 弹出指示框, 让用户选择
+                
+                [PHPhotoLibrary requestAuthorization:^(PHAuthorizationStatus status) {
+                    
+                    // 如果用户选择授权, 则保存图片
+                    if (status == PHAuthorizationStatusAuthorized) {
+                        [self saveImageToPhotoAlbum:image];
+                    } else {
+                        [self alertWithTitle:@"提示" message:@"您拒绝了访问相册，无法保存图片" OKTitle:@"确定" isNeedCancel:NO cancelSEL:nil handle:nil];
+                        
+                    }
+                }];
+                
+            } else {
+                //PHAuthorizationStatusRestricted,        // 无权访问
+                //PHAuthorizationStatusDenied,            // 用户明确拒绝访问
+                //            [SVProgressHUD showWithStatus:@"请在设置界面, 授权访问相册"];
+                [self alertWithTitle:@"提示" message:@"无访问相册权限，请去设置里设置" OKTitle:@"确定" isNeedCancel:NO cancelSEL:nil handle:nil];
+            }
+            
+        }];
+    } else {
+        if (stillImageConnection.active) {
+            
+            [self.photoOutput capturePhotoWithSettings:self.photoSettings delegate:self];
         }
-        
-//        NSData *jpegData = [AVCaptureStillImageOutput jpegStillImageNSDataRepresentation:imageDataSampleBuffer];
-        NSData *jpegData = [AVCapturePhotoOutput JPEGPhotoDataRepresentationForJPEGSampleBuffer:imageDataSampleBuffer previewPhotoSampleBuffer:nil];
-        
-        UIImage *image = [UIImage imageWithData:jpegData];
+    }
+    
+}
+
+#pragma mark - AVCapturePhotoCaptureDelegate
+
+-(void)captureOutput:(AVCapturePhotoOutput *)captureOutput didFinishProcessingPhotoSampleBuffer:(CMSampleBufferRef)photoSampleBuffer previewPhotoSampleBuffer:(CMSampleBufferRef)previewPhotoSampleBuffer resolvedSettings:(AVCaptureResolvedPhotoSettings *)resolvedSettings bracketSettings:(AVCaptureBracketedStillImageSettings *)bracketSettings error:(NSError *)error
+{
+    if (error) {
+        NSLog(@"error : %@", error.localizedDescription);
+    }
+    
+    if (photoSampleBuffer) {
+        NSData *data = [AVCapturePhotoOutput JPEGPhotoDataRepresentationForJPEGSampleBuffer:photoSampleBuffer previewPhotoSampleBuffer:previewPhotoSampleBuffer];
+        UIImage *image = [UIImage imageWithData:data];
         
         self.image = [self drawMarkImage:image martText:nil rect:kScreenBounds];
         
@@ -550,6 +623,8 @@
         [self.view insertSubview:_imageView belowSubview:_topBlackView];
         self.imageView.layer.masksToBounds = YES;
         self.imageView.image = image;
+        
+        
         // 1. 获取当前App的相册授权状态
         PHAuthorizationStatus authorizationStatus = [PHPhotoLibrary authorizationStatus];
         
@@ -565,15 +640,21 @@
                 
                 // 如果用户选择授权, 则保存图片
                 if (status == PHAuthorizationStatusAuthorized) {
-                    //                    [self saveImageToPhotoAlbum:image];
+                    [self saveImageToPhotoAlbum:image];
+                } else {
+                    [self alertWithTitle:@"提示" message:@"您拒绝了访问相册，无法保存图片" OKTitle:@"确定" isNeedCancel:NO cancelSEL:nil handle:nil];
+                    
                 }
             }];
             
         } else {
+            //PHAuthorizationStatusRestricted,        // 无权访问
+            //PHAuthorizationStatusDenied,            // 用户明确拒绝访问
             //            [SVProgressHUD showWithStatus:@"请在设置界面, 授权访问相册"];
+            [self alertWithTitle:@"提示" message:@"无访问相册权限，请去设置里设置" OKTitle:@"确定" isNeedCancel:NO cancelSEL:nil handle:nil];
         }
         
-    }];
+    }
     
 }
 
@@ -602,22 +683,39 @@
 - (void)flashButtonClick:(UIButton *)sender {
     
     AVCaptureDevice *device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
-//    AVCapturePhotoOutput
+    
+    AVCapturePhotoSettings *setting = [AVCapturePhotoSettings photoSettings];
+
+//    device.flashMode 使用 setting.flashMode 代替
+    
     //修改前必须先锁定
     [device lockForConfiguration:nil];
     //必须判定是否有闪光灯，否则如果没有闪光灯会崩溃
     if ([device hasFlash]) {
         
-        if (device.flashMode == AVCaptureFlashModeOff) {
-            device.flashMode = AVCaptureFlashModeOn;
-            self.flashLabel.text = @"打开";
-        } else if (device.flashMode == AVCaptureFlashModeOn) {
-//            AVCapturePhotoSettings.flashMode = AVCaptureFlashModeAuto;
-            device.flashMode = AVCaptureFlashModeAuto;
-            self.flashLabel.text = @"自动";
-        } else if (device.flashMode == AVCaptureFlashModeAuto) {
-            device.flashMode = AVCaptureFlashModeOff;
-            self.flashLabel.text = @"关闭";
+        if (kSystemVersion < 10.0) {
+            if (device.flashMode == AVCaptureFlashModeOff) {
+                device.flashMode = AVCaptureFlashModeOn;
+                self.flashLabel.text = @"打开";
+            } else if (device.flashMode == AVCaptureFlashModeOn) {
+                //            AVCapturePhotoSettings.flashMode = AVCaptureFlashModeAuto;
+                device.flashMode = AVCaptureFlashModeAuto;
+                self.flashLabel.text = @"自动";
+            } else if (device.flashMode == AVCaptureFlashModeAuto) {
+                device.flashMode = AVCaptureFlashModeOff;
+                self.flashLabel.text = @"关闭";
+            }
+        } else {
+            if (setting.flashMode == AVCaptureFlashModeOff) {
+                setting.flashMode = AVCaptureFlashModeOn;
+                self.flashLabel.text = @"打开";
+            } else if (setting.flashMode == AVCaptureFlashModeOn) {
+                setting.flashMode = AVCaptureFlashModeAuto;
+                self.flashLabel.text = @"自动";
+            } else if (setting.flashMode == AVCaptureFlashModeAuto) {
+                setting.flashMode = AVCaptureFlashModeOff;
+                self.flashLabel.text = @"关闭";
+            }
         }
         
     } else {
@@ -647,7 +745,7 @@
             self.effectiveScale = 1.0;
         }
         
-        CGFloat maxScaleAndCropFactor = [[self.stillImageOutput connectionWithMediaType:AVMediaTypeVideo] videoMaxScaleAndCropFactor];
+        CGFloat maxScaleAndCropFactor = [[(kSystemVersion < 10.0 ? self.stillImageOutput : self.photoOutput) connectionWithMediaType:AVMediaTypeVideo] videoMaxScaleAndCropFactor];
         
         if (self.effectiveScale > maxScaleAndCropFactor)
             self.effectiveScale = maxScaleAndCropFactor;
