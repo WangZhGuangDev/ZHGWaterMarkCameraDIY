@@ -23,14 +23,10 @@
 
 //界面控件
 @property (strong, nonatomic)  UIButton *flashButton;
-@property (nonatomic, strong) AVCapturePhotoSettings *photoSettings;
-/**
- *  切换摄像头按钮
- */
+
+/** 切换摄像头按钮 */
 @property (nonatomic, strong) UIButton *switchButton;
-/**
- *  拍照按钮
- */
+/** 拍照按钮 */
 @property (nonatomic, strong) UIButton *cameraButton;
 //AVFoundation
 
@@ -38,36 +34,25 @@
 @property(nonatomic)AVCaptureDevice *device;
 
 @property (nonatomic) dispatch_queue_t sessionQueue;
-/**
- *  AVCaptureSession对象来执行输入设备和输出设备之间的数据传递
- */
+/** AVCaptureSession对象来执行输入设备和输出设备之间的数据传递 */
 @property (nonatomic, strong) AVCaptureSession* session;
-/**
- *  输入设备
- */
+/** 输入设备 */
 @property (nonatomic, strong) AVCaptureDeviceInput* videoInput;
-/**
- *  照片输出流
- */
+
+/** 静态图片输出流 iOS10 以后被废弃 */
 @property (nonatomic, strong) AVCaptureStillImageOutput* stillImageOutput;
 
-/**
- *  照片输出流
- */
+/**  照片输出流 iOS10 的新API，不仅支持静态图，还支持Live Photo等 */
 @property (nonatomic, strong) AVCapturePhotoOutput* photoOutput;
+/** 针对AVCapturePhotoOutput 类似于 AVCaptureStillImageOutput 的 outputSettings */
+@property (nonatomic, strong) AVCapturePhotoSettings *photoSettings;
 
-/**
- *  预览图层
- */
+/**  预览图层 */
 @property (nonatomic, strong) AVCaptureVideoPreviewLayer* previewLayer;
 
-/**
- *  记录开始的缩放比例
- */
+/**  记录开始的缩放比例 */
 @property(nonatomic,assign)CGFloat beginGestureScale;
-/**
- *  最后的缩放比例
- */
+/** 最后的缩放比例 */
 @property(nonatomic,assign)CGFloat effectiveScale;
 
 /** 水印时间 */
@@ -107,7 +92,7 @@
     
     [self initAVCaptureSession];
     [self setUpGesture];
-    [self customUI];
+    [self configureUI];
     isUsingFrontFacingCamera = NO;
     
     self.effectiveScale = self.beginGestureScale = 1.0f;
@@ -142,7 +127,7 @@
 }
 
 
-- (void)customUI{
+-(void)configureUI {
     
     self.topBlackView = [self createTopBlackView];
     [self topMaskViewWithView:self.topBlackView];
@@ -197,6 +182,16 @@
     topMaskview.image = [UIImage imageNamed:@"markTopMView"];
     [self.view addSubview:topMaskview];
     
+    
+    //获取系统是24小时制或者12小时制
+    NSString *formatStringForHours = [NSDateFormatter dateFormatFromTemplate:@"j" options:0 locale:[NSLocale currentLocale]];
+    NSRange containsA = [formatStringForHours rangeOfString:@"a"];
+    BOOL hasAMPM = containsA.location != NSNotFound;
+    //hasAMPM==TURE为12小时制，否则为24小时制
+    
+    
+    
+    
     NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
     [formatter setDateFormat:@"yyyy.MM.dd hh:mm"];
     NSString *timeStr = [formatter stringFromDate:[NSDate date]];
@@ -207,9 +202,27 @@
     NSString *weekDay = [self weekdayStringFromDate:[NSDate date]];
     self.dateString = [NSString stringWithFormat:@"%@ %@",dateString,weekDay];
     
-    UILabel *label = [self labelWithText:self.timeString fontSize:30 alignment:0];
-    label.frame = CGRectMake(20, 20, 100, 30);
+    //不区分12小时制
+//    UILabel *label = [self labelWithText:self.timeString fontSize:30 alignment:0];
+//    label.frame = CGRectMake(20, 20, 100, 30);
     
+    NSDateFormatter *formatter0 = [[NSDateFormatter alloc]init];
+    [formatter0 setDateFormat:@"HH"];
+    NSString *str = [formatter0 stringFromDate:[NSDate date]];
+    int time = [str intValue];
+    
+    if (hasAMPM) {
+        if (time > 12) {
+            self.timeString = [NSString stringWithFormat:@"%@pm",self.timeString];
+        } else {
+            self.timeString = [NSString stringWithFormat:@"%@am",self.timeString];
+        }
+    }
+    
+    UILabel *label = [self labelWithText:self.timeString fontSize:30 alignment:0];
+    label.frame = CGRectMake(20, 20, 150, 30);
+    
+   
     UILabel *dateLabel = [self labelWithText:self.dateString fontSize:14 alignment:0];
     dateLabel.frame = CGRectMake(20, CGRectGetMaxY(label.frame)+5, 200, 15);
     
@@ -435,6 +448,30 @@
     
 }
 
+-(void)jfdlas {
+    //获取系统是24小时制或者12小时制
+    NSString *formatStringForHours = [NSDateFormatter dateFormatFromTemplate:@"j" options:0 locale:[NSLocale currentLocale]];
+    NSRange containsA = [formatStringForHours rangeOfString:@"a"];
+    BOOL hasAMPM = containsA.location != NSNotFound;
+    //hasAMPM==TURE为12小时制，否则为24小时制
+    
+    NSDateFormatter *formatter = [[NSDateFormatter alloc]init];
+    [formatter setDateFormat:@"HH"];
+    NSString *str = [formatter stringFromDate:[NSDate date]];
+    int time = [str intValue];
+    
+    if (hasAMPM) {
+        if (time > 12) {
+            self.timeString = [NSString stringWithFormat:@"%@pm",self.timeString];
+        } else {
+            self.timeString = [NSString stringWithFormat:@"%@am",self.timeString];
+        }
+    }
+    
+    UILabel *label = [self labelWithText:self.timeString fontSize:30 alignment:0];
+    label.frame = CGRectMake(20, 20, 150, 30);
+    
+}
 
 - (AVCaptureVideoOrientation)avOrientationForDeviceOrientation:(UIDeviceOrientation)deviceOrientation
 {
@@ -565,34 +602,8 @@
             [self.view insertSubview:_imageView belowSubview:_topBlackView];
             self.imageView.layer.masksToBounds = YES;
             self.imageView.image = image;
-            // 1. 获取当前App的相册授权状态
-            PHAuthorizationStatus authorizationStatus = [PHPhotoLibrary authorizationStatus];
-    
-            // 2. 判断授权状态
-            if (authorizationStatus == PHAuthorizationStatusAuthorized) {
-                
-                // 2.1 如果已经授权, 保存图片(调用步骤2的方法)
-                [self saveImageToPhotoAlbum:image];
-                
-            } else if (authorizationStatus == PHAuthorizationStatusNotDetermined) { // 如果没决定, 弹出指示框, 让用户选择
-                
-                [PHPhotoLibrary requestAuthorization:^(PHAuthorizationStatus status) {
-                    
-                    // 如果用户选择授权, 则保存图片
-                    if (status == PHAuthorizationStatusAuthorized) {
-                        [self saveImageToPhotoAlbum:image];
-                    } else {
-                        [self alertWithTitle:@"提示" message:@"您拒绝了访问相册，无法保存图片" OKTitle:@"确定" isNeedCancel:NO cancelSEL:nil handle:nil];
-                        
-                    }
-                }];
-                
-            } else {
-                //PHAuthorizationStatusRestricted,        // 无权访问
-                //PHAuthorizationStatusDenied,            // 用户明确拒绝访问
-                //            [SVProgressHUD showWithStatus:@"请在设置界面, 授权访问相册"];
-                [self alertWithTitle:@"提示" message:@"无访问相册权限，请去设置里设置" OKTitle:@"确定" isNeedCancel:NO cancelSEL:nil handle:nil];
-            }
+            
+            [self authorizationStatusHandler:image];
             
         }];
     } else {
@@ -624,50 +635,45 @@
         self.imageView.layer.masksToBounds = YES;
         self.imageView.image = image;
         
-        
-        // 1. 获取当前App的相册授权状态
-        PHAuthorizationStatus authorizationStatus = [PHPhotoLibrary authorizationStatus];
-        
-        // 2. 判断授权状态
-        if (authorizationStatus == PHAuthorizationStatusAuthorized) {
-            
-            // 2.1 如果已经授权, 保存图片(调用步骤2的方法)
-            //            [self saveImageToPhotoAlbum:image];
-            
-        } else if (authorizationStatus == PHAuthorizationStatusNotDetermined) { // 如果没决定, 弹出指示框, 让用户选择
-            
-            [PHPhotoLibrary requestAuthorization:^(PHAuthorizationStatus status) {
-                
-                // 如果用户选择授权, 则保存图片
-                if (status == PHAuthorizationStatusAuthorized) {
-                    [self saveImageToPhotoAlbum:image];
-                } else {
-                    [self alertWithTitle:@"提示" message:@"您拒绝了访问相册，无法保存图片" OKTitle:@"确定" isNeedCancel:NO cancelSEL:nil handle:nil];
-                    
-                }
-            }];
-            
-        } else {
-            //PHAuthorizationStatusRestricted,        // 无权访问
-            //PHAuthorizationStatusDenied,            // 用户明确拒绝访问
-            //            [SVProgressHUD showWithStatus:@"请在设置界面, 授权访问相册"];
-            [self alertWithTitle:@"提示" message:@"无访问相册权限，请去设置里设置" OKTitle:@"确定" isNeedCancel:NO cancelSEL:nil handle:nil];
-        }
-        
+        [self authorizationStatusHandler:image];
     }
     
 }
 
+-(void)authorizationStatusHandler:(UIImage *)image {
+    // 获取当前App的相册授权状态
+    PHAuthorizationStatus authorizationStatus = [PHPhotoLibrary authorizationStatus];
+    
+    // 判断授权状态
+    if (authorizationStatus == PHAuthorizationStatusAuthorized) {
+        // 如果已经授权, 保存图片
+        [self saveImageToPhotoAlbum:image];
+        
+    } else if (authorizationStatus == PHAuthorizationStatusNotDetermined) { // 如果没决定, 弹出指示框, 让用户选择
+        
+        [PHPhotoLibrary requestAuthorization:^(PHAuthorizationStatus status) {
+            // 如果用户选择授权, 则保存图片
+            if (status == PHAuthorizationStatusAuthorized) {
+                [self saveImageToPhotoAlbum:image];
+            } else {
+                [self alertWithTitle:@"提示" message:@"您拒绝了访问相册，无法保存图片" OKTitle:@"确定" isNeedCancel:NO cancelSEL:nil handle:nil];
+            }
+        }];
+        
+    } else {
+        //PHAuthorizationStatusRestricted || PHAuthorizationStatusDenied
+        [self alertWithTitle:@"提示" message:@"无访问相册权限，请去设置里设置" OKTitle:@"确定" isNeedCancel:NO cancelSEL:nil handle:nil];
+    }
+}
+
 #pragma - 保存至相册
-- (void)saveImageToPhotoAlbum:(UIImage*)savedImage
-{
+- (void)saveImageToPhotoAlbum:(UIImage*)savedImage {
     
     UIImageWriteToSavedPhotosAlbum(savedImage, self, @selector(image:didFinishSavingWithError:contextInfo:), NULL);
-    
 }
-// 指定回调方法
 
-- (void)image: (UIImage *) image didFinishSavingWithError: (NSError *) error contextInfo: (void *) contextInfo
+// 指定回调方法
+- (void)image:(UIImage *)image didFinishSavingWithError:(NSError *)error contextInfo:(void *)contextInfo
 
 {
     NSString *msg = nil ;
@@ -698,7 +704,6 @@
                 device.flashMode = AVCaptureFlashModeOn;
                 self.flashLabel.text = @"打开";
             } else if (device.flashMode == AVCaptureFlashModeOn) {
-                //            AVCapturePhotoSettings.flashMode = AVCaptureFlashModeAuto;
                 device.flashMode = AVCaptureFlashModeAuto;
                 self.flashLabel.text = @"自动";
             } else if (device.flashMode == AVCaptureFlashModeAuto) {
@@ -765,7 +770,7 @@
     [image drawInRect:rect];
     
     /** 顶部蒙版 */
-    CGRect rectTopMask = CGRectMake(0, 0, kScreenWidth, 100);
+    CGRect rectTopMask = CGRectMake(0, CGRectGetMaxY(self.topBlackView.frame), kScreenWidth, 100);
     UIImage *imageTopMask = [UIImage imageNamed:@"markTopMView"];
     [imageTopMask drawInRect:rectTopMask];
     
