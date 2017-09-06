@@ -13,7 +13,7 @@
 #import <Photos/Photos.h>
 
 
-#define kScreenBounds   [UIScreen mainScreen].bounds
+#define kScreenBounds [UIScreen mainScreen].bounds
 #define kScreenWidth  [UIScreen mainScreen].bounds.size.width
 #define kScreenHeight [UIScreen mainScreen].bounds.size.height
 
@@ -35,20 +35,20 @@
 
 @property (nonatomic) dispatch_queue_t sessionQueue;
 /** AVCaptureSession对象来执行输入设备和输出设备之间的数据传递 */
-@property (nonatomic, strong) AVCaptureSession* session;
+@property (nonatomic, strong) AVCaptureSession *captureSession;
 /** 输入设备 */
-@property (nonatomic, strong) AVCaptureDeviceInput* videoInput;
+@property (nonatomic, strong) AVCaptureDeviceInput *deviceInput;
 
 /** 静态图片输出流 iOS10 以后被废弃 */
-@property (nonatomic, strong) AVCaptureStillImageOutput* stillImageOutput;
+@property (nonatomic, strong) AVCaptureStillImageOutput *stillImageOutput;
 
 /**  照片输出流 iOS10 的新API，不仅支持静态图，还支持Live Photo等 */
-@property (nonatomic, strong) AVCapturePhotoOutput* photoOutput;
+@property (nonatomic, strong) AVCapturePhotoOutput *photoOutput;
 /** 针对AVCapturePhotoOutput 类似于 AVCaptureStillImageOutput 的 outputSettings */
 @property (nonatomic, strong) AVCapturePhotoSettings *photoSettings;
 
 /**  预览图层 */
-@property (nonatomic, strong) AVCaptureVideoPreviewLayer* previewLayer;
+@property (nonatomic, strong) AVCaptureVideoPreviewLayer *previewLayer;
 
 /**  记录开始的缩放比例 */
 @property(nonatomic,assign)CGFloat beginGestureScale;
@@ -103,9 +103,9 @@
     
     [super viewWillAppear:YES];
     
-    if (self.session) {
+    if (self.captureSession) {
         
-        [self.session startRunning];
+        [self.captureSession startRunning];
     }
 }
 
@@ -113,9 +113,9 @@
     
     [super viewDidDisappear:YES];
     
-    if (self.session) {
+    if (self.captureSession) {
         
-        [self.session stopRunning];
+        [self.captureSession stopRunning];
     }
 }
 
@@ -377,7 +377,7 @@
         self.flashLabel.hidden = NO;
         self.flashButton.hidden = NO;
         self.switchButton.hidden = NO;
-        [self.session startRunning];
+        [self.captureSession startRunning];
     }
     
 }
@@ -399,7 +399,7 @@
 #pragma mark private method
 - (void)initAVCaptureSession{
     
-    self.session = [[AVCaptureSession alloc] init];
+    self.captureSession = [[AVCaptureSession alloc] init];
     
     NSError *error;
     
@@ -413,7 +413,7 @@
     }
     [self.device unlockForConfiguration];
     
-    self.videoInput = [[AVCaptureDeviceInput alloc] initWithDevice:self.device error:&error];
+    self.deviceInput = [[AVCaptureDeviceInput alloc] initWithDevice:self.device error:&error];
     if (error) {
         NSLog(@"%@",error);
     }
@@ -429,17 +429,17 @@
     
     
     
-    if ([self.session canAddInput:self.videoInput]) {
-        [self.session addInput:self.videoInput];
+    if ([self.captureSession canAddInput:self.deviceInput]) {
+        [self.captureSession addInput:self.deviceInput];
     }
-    if ([self.session canAddOutput:(kSystemVersion < 10.0 ? self.stillImageOutput : self.photoOutput)]) {
-        [self.session addOutput:(kSystemVersion < 10.0 ? self.stillImageOutput : self.photoOutput)];
+    if ([self.captureSession canAddOutput:(kSystemVersion < 10.0 ? self.stillImageOutput : self.photoOutput)]) {
+        [self.captureSession addOutput:(kSystemVersion < 10.0 ? self.stillImageOutput : self.photoOutput)];
     }
     
     
     
     //初始化预览图层
-    self.previewLayer = [[AVCaptureVideoPreviewLayer alloc] initWithSession:self.session];
+    self.previewLayer = [[AVCaptureVideoPreviewLayer alloc] initWithSession:self.captureSession];
     //    [self.previewLayer setVideoGravity:AVLayerVideoGravityResizeAspect];
     self.previewLayer.frame = CGRectMake(0, 0,kScreenWidth, kScreenHeight);
     self.view.layer.masksToBounds = YES;
@@ -524,7 +524,7 @@
         animation.type = @"oglFlip";
         AVCaptureDevice *newCamera = nil;
         AVCaptureDeviceInput *newInput = nil;
-        AVCaptureDevicePosition position = [[self.videoInput device] position];
+        AVCaptureDevicePosition position = [[self.deviceInput device] position];
         if (position == AVCaptureDevicePositionFront){
             newCamera = [self cameraWithPosition:AVCaptureDevicePositionBack];
             animation.subtype = kCATransitionFromLeft;
@@ -537,17 +537,17 @@
         [self.previewLayer addAnimation:animation forKey:nil];
         newInput = [AVCaptureDeviceInput deviceInputWithDevice:newCamera error:nil];
         if (newInput != nil) {
-            [self.session beginConfiguration];
-            [self.session removeInput:self.videoInput];
-            if ([self.session canAddInput:newInput]) {
-                [self.session addInput:newInput];
-                self.videoInput = newInput;
+            [self.captureSession beginConfiguration];
+            [self.captureSession removeInput:self.deviceInput];
+            if ([self.captureSession canAddInput:newInput]) {
+                [self.captureSession addInput:newInput];
+                self.deviceInput = newInput;
                 
             } else {
-                [self.session addInput:self.videoInput];
+                [self.captureSession addInput:self.deviceInput];
             }
             
-            [self.session commitConfiguration];
+            [self.captureSession commitConfiguration];
             
         } else if (error) {
             NSLog(@"toggle carema failed, error = %@", error);
@@ -597,7 +597,7 @@
     
             self.image = [self drawMarkImage:image martText:nil rect:kScreenBounds];
     
-            [self.session stopRunning];
+            [self.captureSession stopRunning];
             self.imageView = [[UIImageView alloc]initWithFrame:self.previewLayer.frame];
             [self.view insertSubview:_imageView belowSubview:_topBlackView];
             self.imageView.layer.masksToBounds = YES;
@@ -629,7 +629,7 @@
         
         self.image = [self drawMarkImage:image martText:nil rect:kScreenBounds];
         
-        [self.session stopRunning];
+        [self.captureSession stopRunning];
         self.imageView = [[UIImageView alloc]initWithFrame:self.previewLayer.frame];
         [self.view insertSubview:_imageView belowSubview:_topBlackView];
         self.imageView.layer.masksToBounds = YES;
