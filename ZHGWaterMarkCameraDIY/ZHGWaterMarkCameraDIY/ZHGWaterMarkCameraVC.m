@@ -71,6 +71,7 @@
 /** 闪光灯文字 */
 @property (nonatomic, strong) UILabel *flashLabel;
 
+/** 点击时的对焦框 */
 @property (nonatomic)UIView *focusView;
 
 /** 拍完照显示生成的照片，保证预览的效果和实际效果一致 */
@@ -79,11 +80,7 @@
 
 @end
 
-@implementation ZHGWaterMarkCameraVC {
-    
-    BOOL isUsingFrontFacingCamera;
-}
-
+@implementation ZHGWaterMarkCameraVC
 
 #pragma mark life circle
 
@@ -93,7 +90,6 @@
     [self initAVCaptureSession];
     [self setUpGesture];
     [self configureUI];
-    isUsingFrontFacingCamera = NO;
     
     self.effectiveScale = self.beginGestureScale = 1.0f;
     
@@ -126,7 +122,7 @@
     return YES;
 }
 
-
+#pragma mark - configure UI
 -(void)configureUI {
     
     self.topBlackView = [self createTopBlackView];
@@ -166,6 +162,7 @@
     _flashLabel.frame = CGRectMake(CGRectGetMaxX(_flashButton.frame), CGRectGetMinY(_flashButton.frame), 50, 21);
     [topBlackView addSubview:self.flashLabel];
     
+    /** 因为闪光灯图标太小，点击比较费劲，所以添加一个空白按钮增大点击范围 */
     UIButton *tapButton = [self buttonWithTitle:nil imageName:nil target:self action:@selector(flashButtonClick:)];
     [tapButton setFrame:(CGRectMake(20, 0, 65, 50))];
     [tapButton setBackgroundColor:[UIColor clearColor]];
@@ -182,47 +179,24 @@
     topMaskview.image = [UIImage imageNamed:@"markTopMView"];
     [self.view addSubview:topMaskview];
     
-    
-    //获取系统是24小时制或者12小时制
-    NSString *formatStringForHours = [NSDateFormatter dateFormatFromTemplate:@"j" options:0 locale:[NSLocale currentLocale]];
-    NSRange containsA = [formatStringForHours rangeOfString:@"a"];
-    BOOL hasAMPM = containsA.location != NSNotFound;
-    //hasAMPM==TURE为12小时制，否则为24小时制
-    
-    
-    
-    
     NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
     [formatter setDateFormat:@"yyyy.MM.dd hh:mm"];
     NSString *timeStr = [formatter stringFromDate:[NSDate date]];
-    
     
     NSString *dateString = [timeStr substringWithRange:NSMakeRange(0, 10)];
     self.timeString = [timeStr substringWithRange:NSMakeRange(11, 5)];
     NSString *weekDay = [self weekdayStringFromDate:[NSDate date]];
     self.dateString = [NSString stringWithFormat:@"%@ %@",dateString,weekDay];
     
-    //不区分12小时制
-//    UILabel *label = [self labelWithText:self.timeString fontSize:30 alignment:0];
-//    label.frame = CGRectMake(20, 20, 100, 30);
-    
-    NSDateFormatter *formatter0 = [[NSDateFormatter alloc]init];
-    [formatter0 setDateFormat:@"HH"];
-    NSString *str = [formatter0 stringFromDate:[NSDate date]];
-    int time = [str intValue];
-    
-    if (hasAMPM) {
-        if (time > 12) {
-            self.timeString = [NSString stringWithFormat:@"%@pm",self.timeString];
-        } else {
-            self.timeString = [NSString stringWithFormat:@"%@am",self.timeString];
-        }
+    if (self.isTwelveHandle) {
+        BOOL hasAMPM = [self isTwelveMechanism];
+        int time = [self currentIntTime];
+        self.timeString = hasAMPM ? [NSString stringWithFormat:@"%@%@",self.timeString,(time > 12 ? @"pm" : @"am")] : self.timeString;
     }
     
     UILabel *label = [self labelWithText:self.timeString fontSize:30 alignment:0];
     label.frame = CGRectMake(20, 20, 150, 30);
     
-   
     UILabel *dateLabel = [self labelWithText:self.dateString fontSize:14 alignment:0];
     dateLabel.frame = CGRectMake(20, CGRectGetMaxY(label.frame)+5, 200, 15);
     
@@ -273,6 +247,7 @@
     
     return bottomMaskView;
 }
+#pragma mark - UI public method
 /**
  *  创建View
  */
@@ -317,10 +292,98 @@
     return label;
 }
 
+
+- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
+    return (interfaceOrientation == UIInterfaceOrientationPortrait);
+}
+
+-(AVCapturePhotoSettings *)photoSettings {
+    if (!_photoSettings) {
+        _photoSettings = [AVCapturePhotoSettings photoSettings];
+        _photoSettings.flashMode = AVCaptureFlashModeAuto;
+    }
+    return _photoSettings;
+}
+
+#pragma mark private method
+- (void)initAVCaptureSession{
+    
+    self.captureSession = [[AVCaptureSession alloc] init];
+    
+    NSError *error;
+    
+    self.device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
+
+    //更改这个设置的时候必须先锁定设备，修改完后再解锁，否则崩溃（iOS10之前）
+    [self.device lockForConfiguration:nil];
+    //设置闪光灯为自动
+    if (kSystemVersion < 10.0) {
+        [self.device setFlashMode:AVCaptureFlashModeAuto];
+    }
+    [self.device unlockForConfiguration];
+    
+    self.deviceInput = [[AVCaptureDeviceInput alloc] initWithDevice:self.device error:&error];
+
+    if (kSystemVersion < 10.0) {
+        self.stillImageOutput = [[AVCaptureStillImageOutput alloc] init];
+        NSDictionary * outputSettings = [[NSDictionary alloc] initWithObjectsAndKeys:AVVideoCodecJPEG,AVVideoCodecKey, nil];
+        [self.stillImageOutput setOutputSettings:outputSettings];
+    } else {
+        self.photoOutput = [[AVCapturePhotoOutput alloc] init];
+    }
+    
+    if ([self.captureSession canAddInput:self.deviceInput]) {
+        [self.captureSession addInput:self.deviceInput];
+    }
+    if ([self.captureSession canAddOutput:(kSystemVersion < 10.0 ? self.stillImageOutput : self.photoOutput)]) {
+        [self.captureSession addOutput:(kSystemVersion < 10.0 ? self.stillImageOutput : self.photoOutput)];
+    }
+    [self initPreviewLayer];
+}
+
+-(void)initPreviewLayer {
+    //初始化预览图层
+    self.previewLayer = [[AVCaptureVideoPreviewLayer alloc] initWithSession:self.captureSession];
+    //    [self.previewLayer setVideoGravity:AVLayerVideoGravityResizeAspect];
+    self.previewLayer.frame = CGRectMake(0, 0,kScreenWidth, kScreenHeight);
+    self.view.layer.masksToBounds = YES;
+    self.previewLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
+    [self.view.layer addSublayer:self.previewLayer];
+}
+
+
+- (AVCaptureVideoOrientation)avOrientationForDeviceOrientation:(UIDeviceOrientation)deviceOrientation
+{
+    AVCaptureVideoOrientation result = (AVCaptureVideoOrientation)deviceOrientation;
+    if ( deviceOrientation == UIDeviceOrientationLandscapeLeft )
+        result = AVCaptureVideoOrientationLandscapeRight;
+    else if ( deviceOrientation == UIDeviceOrientationLandscapeRight )
+        result = AVCaptureVideoOrientationLandscapeLeft;
+    return result;
+}
+
+#pragma 创建手势
+- (void)setUpGesture{
+    
+    UIPinchGestureRecognizer *pinch = [[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(handlePinchGesture:)];
+    pinch.delegate = self;
+    [self.view addGestureRecognizer:pinch];
+}
+
+#pragma mark gestureRecognizer delegate
+- (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gestureRecognizer
+{
+    if ( [gestureRecognizer isKindOfClass:[UIPinchGestureRecognizer class]] ) {
+        self.beginGestureScale = self.effectiveScale;
+    }
+    return YES;
+}
+
+#pragma mark - SEL Actions
 -(void)userImage:(UIButton *)button {
-    if ([self.delegate respondsToSelector:@selector(cameraViwe:image:)]) {
+    if ([self.delegate respondsToSelector:@selector(markCameraController:image:)]) {
         [self dismissViewControllerAnimated:YES completion:nil];
-        [self.delegate cameraViwe:self image:self.image];
+        [self.delegate markCameraController:self image:self.image];
     }
 }
 
@@ -328,6 +391,7 @@
     CGPoint point = [gesture locationInView:gesture.view];
     [self focusAtPoint:point];
 }
+
 - (void)focusAtPoint:(CGPoint)point{
     CGSize size = self.view.bounds.size;
     if (point.y > kScreenHeight - 125) {
@@ -382,128 +446,8 @@
     
 }
 
-- (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation
-{
-    // Return YES for supported orientations
-    return (interfaceOrientation == UIInterfaceOrientationPortrait);
-}
-
--(AVCapturePhotoSettings *)photoSettings {
-    if (!_photoSettings) {
-        _photoSettings = [AVCapturePhotoSettings photoSettings];
-        _photoSettings.flashMode = AVCaptureFlashModeAuto;
-    }
-    return _photoSettings;
-}
-
-#pragma mark private method
-- (void)initAVCaptureSession{
-    
-    self.captureSession = [[AVCaptureSession alloc] init];
-    
-    NSError *error;
-    
-    self.device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
-
-    //更改这个设置的时候必须先锁定设备，修改完后再解锁，否则崩溃（iOS10之前）
-    [self.device lockForConfiguration:nil];
-    //设置闪光灯为自动
-    if (kSystemVersion < 10.0) {
-        [self.device setFlashMode:AVCaptureFlashModeAuto];
-    }
-    [self.device unlockForConfiguration];
-    
-    self.deviceInput = [[AVCaptureDeviceInput alloc] initWithDevice:self.device error:&error];
-    if (error) {
-        NSLog(@"%@",error);
-    }
-    
-
-    if (kSystemVersion < 10.0) {
-        self.stillImageOutput = [[AVCaptureStillImageOutput alloc] init];
-        NSDictionary * outputSettings = [[NSDictionary alloc] initWithObjectsAndKeys:AVVideoCodecJPEG,AVVideoCodecKey, nil];
-        [self.stillImageOutput setOutputSettings:outputSettings];
-    } else {
-        self.photoOutput = [[AVCapturePhotoOutput alloc] init];
-    }
-    
-    
-    
-    if ([self.captureSession canAddInput:self.deviceInput]) {
-        [self.captureSession addInput:self.deviceInput];
-    }
-    if ([self.captureSession canAddOutput:(kSystemVersion < 10.0 ? self.stillImageOutput : self.photoOutput)]) {
-        [self.captureSession addOutput:(kSystemVersion < 10.0 ? self.stillImageOutput : self.photoOutput)];
-    }
-    
-    
-    
-    //初始化预览图层
-    self.previewLayer = [[AVCaptureVideoPreviewLayer alloc] initWithSession:self.captureSession];
-    //    [self.previewLayer setVideoGravity:AVLayerVideoGravityResizeAspect];
-    self.previewLayer.frame = CGRectMake(0, 0,kScreenWidth, kScreenHeight);
-    self.view.layer.masksToBounds = YES;
-    self.previewLayer.videoGravity = AVLayerVideoGravityResizeAspectFill;
-    [self.view.layer addSublayer:self.previewLayer];
-    
-}
-
--(void)jfdlas {
-    //获取系统是24小时制或者12小时制
-    NSString *formatStringForHours = [NSDateFormatter dateFormatFromTemplate:@"j" options:0 locale:[NSLocale currentLocale]];
-    NSRange containsA = [formatStringForHours rangeOfString:@"a"];
-    BOOL hasAMPM = containsA.location != NSNotFound;
-    //hasAMPM==TURE为12小时制，否则为24小时制
-    
-    NSDateFormatter *formatter = [[NSDateFormatter alloc]init];
-    [formatter setDateFormat:@"HH"];
-    NSString *str = [formatter stringFromDate:[NSDate date]];
-    int time = [str intValue];
-    
-    if (hasAMPM) {
-        if (time > 12) {
-            self.timeString = [NSString stringWithFormat:@"%@pm",self.timeString];
-        } else {
-            self.timeString = [NSString stringWithFormat:@"%@am",self.timeString];
-        }
-    }
-    
-    UILabel *label = [self labelWithText:self.timeString fontSize:30 alignment:0];
-    label.frame = CGRectMake(20, 20, 150, 30);
-    
-}
-
-- (AVCaptureVideoOrientation)avOrientationForDeviceOrientation:(UIDeviceOrientation)deviceOrientation
-{
-    AVCaptureVideoOrientation result = (AVCaptureVideoOrientation)deviceOrientation;
-    if ( deviceOrientation == UIDeviceOrientationLandscapeLeft )
-        result = AVCaptureVideoOrientationLandscapeRight;
-    else if ( deviceOrientation == UIDeviceOrientationLandscapeRight )
-        result = AVCaptureVideoOrientationLandscapeLeft;
-    return result;
-}
-
-#pragma 创建手势
-- (void)setUpGesture{
-    
-    UIPinchGestureRecognizer *pinch = [[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(handlePinchGesture:)];
-    pinch.delegate = self;
-    [self.view addGestureRecognizer:pinch];
-}
-
-#pragma mark gestureRecognizer delegate
-- (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gestureRecognizer
-{
-    if ( [gestureRecognizer isKindOfClass:[UIPinchGestureRecognizer class]] ) {
-        self.beginGestureScale = self.effectiveScale;
-    }
-    return YES;
-}
-
-#pragma mark respone method
 //切换镜头
 - (void)switchCameraSegmentedControlClick:(UIButton *)sender {
-    
     
     NSUInteger cameraCount = 0;
     if (kSystemVersion < 10.0) {
@@ -569,6 +513,122 @@
     }
 }
 
+#pragma - 保存至相册
+- (void)saveImageToPhotoAlbum:(UIImage*)savedImage {
+    
+    UIImageWriteToSavedPhotosAlbum(savedImage, self, @selector(image:didFinishSavingWithError:contextInfo:), NULL);
+}
+
+// 指定回调方法
+- (void)image:(UIImage *)image didFinishSavingWithError:(NSError *)error contextInfo:(void *)contextInfo {
+    
+    NSString *msg = (error != NULL) ? @"保存图片失败" : @"保存图片成功";
+    
+    [self alertWithTitle:@"保存图片结果提示"
+                 message:msg
+                 OKTitle:@"确定"
+            isNeedCancel:NO
+           cancelHandler:nil
+                  handle:nil];
+}
+
+
+- (void)flashButtonClick:(UIButton *)sender {
+    
+    AVCaptureDevice *device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
+    
+    AVCapturePhotoSettings *setting = [AVCapturePhotoSettings photoSettings];
+    
+    //  iOS10 之后  device.flashMode 使用 setting.flashMode 代替
+    
+    //修改前必须先锁定
+    [device lockForConfiguration:nil];
+    //必须判定是否有闪光灯，否则如果没有闪光灯会崩溃
+    if ([device hasFlash]) {
+        
+        if (kSystemVersion < 10.0) {
+            switch (device.flashMode) {
+                case AVCaptureFlashModeOff: {
+                    device.flashMode = AVCaptureFlashModeOn;
+                    self.flashLabel.text = @"打开";
+                    break;
+                }
+                case AVCaptureFlashModeOn: {
+                    device.flashMode = AVCaptureFlashModeAuto;
+                    self.flashLabel.text = @"自动";
+                    break;
+                }
+                case AVCaptureFlashModeAuto: {
+                    device.flashMode = AVCaptureFlashModeOff;
+                    self.flashLabel.text = @"关闭";
+                    break;
+                }
+                default:
+                    break;
+            }
+            
+        } else {
+            
+            switch (setting.flashMode) {
+                case AVCaptureFlashModeOff: {
+                    setting.flashMode = AVCaptureFlashModeOn;
+                    self.flashLabel.text = @"打开";
+                    break;
+                }
+                case AVCaptureFlashModeOn: {
+                    setting.flashMode = AVCaptureFlashModeAuto;
+                    self.flashLabel.text = @"自动";
+                    break;
+                }
+                case AVCaptureFlashModeAuto: {
+                    setting.flashMode = AVCaptureFlashModeOff;
+                    self.flashLabel.text = @"关闭";
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
+        
+    } else {
+        NSLog(@"设备不支持闪光灯");
+    }
+    [device unlockForConfiguration];
+}
+
+//缩放手势 用于调整焦距
+- (void)handlePinchGesture:(UIPinchGestureRecognizer *)recognizer{
+    
+    BOOL allTouchesAreOnThePreviewLayer = YES;
+    NSUInteger numTouches = [recognizer numberOfTouches], i;
+    for (i = 0; i < numTouches; ++i) {
+        CGPoint location = [recognizer locationOfTouch:i inView:self.view];
+        CGPoint convertedLocation = [self.previewLayer convertPoint:location fromLayer:self.previewLayer.superlayer];
+        if ( ! [self.previewLayer containsPoint:convertedLocation] ) {
+            allTouchesAreOnThePreviewLayer = NO;
+            break;
+        }
+    }
+    
+    if (allTouchesAreOnThePreviewLayer) {
+        
+        self.effectiveScale = self.beginGestureScale * recognizer.scale;
+        if (self.effectiveScale < 1.0){
+            self.effectiveScale = 1.0;
+        }
+        
+        CGFloat maxScaleAndCropFactor = [[(kSystemVersion < 10.0 ? self.stillImageOutput : self.photoOutput) connectionWithMediaType:AVMediaTypeVideo] videoMaxScaleAndCropFactor];
+        
+        if (self.effectiveScale > maxScaleAndCropFactor)
+            self.effectiveScale = maxScaleAndCropFactor;
+        
+        [CATransaction begin];
+        [CATransaction setAnimationDuration:.025];
+        [self.previewLayer setAffineTransform:CGAffineTransformMakeScale(self.effectiveScale, self.effectiveScale)];
+        [CATransaction commit];
+    }
+}
+
 - (void)takePhotoButtonClick:(UIButton *)sender {
     
     self.useImageBtn.hidden = NO;
@@ -604,15 +664,12 @@
             self.imageView.image = image;
             
             [self authorizationStatusHandler:image];
-            
         }];
     } else {
         if (stillImageConnection.active) {
-            
             [self.photoOutput capturePhotoWithSettings:self.photoSettings delegate:self];
         }
     }
-    
 }
 
 #pragma mark - AVCapturePhotoCaptureDelegate
@@ -637,130 +694,9 @@
         
         [self authorizationStatusHandler:image];
     }
-    
-}
-
--(void)authorizationStatusHandler:(UIImage *)image {
-    // 获取当前App的相册授权状态
-    PHAuthorizationStatus authorizationStatus = [PHPhotoLibrary authorizationStatus];
-    
-    // 判断授权状态
-    if (authorizationStatus == PHAuthorizationStatusAuthorized) {
-        // 如果已经授权, 保存图片
-        [self saveImageToPhotoAlbum:image];
-        
-    } else if (authorizationStatus == PHAuthorizationStatusNotDetermined) { // 如果没决定, 弹出指示框, 让用户选择
-        
-        [PHPhotoLibrary requestAuthorization:^(PHAuthorizationStatus status) {
-            // 如果用户选择授权, 则保存图片
-            if (status == PHAuthorizationStatusAuthorized) {
-                [self saveImageToPhotoAlbum:image];
-            } else {
-                [self alertWithTitle:@"提示" message:@"您拒绝了访问相册，无法保存图片" OKTitle:@"确定" isNeedCancel:NO cancelSEL:nil handle:nil];
-            }
-        }];
-        
-    } else {
-        //PHAuthorizationStatusRestricted || PHAuthorizationStatusDenied
-        [self alertWithTitle:@"提示" message:@"无访问相册权限，请去设置里设置" OKTitle:@"确定" isNeedCancel:NO cancelSEL:nil handle:nil];
-    }
-}
-
-#pragma - 保存至相册
-- (void)saveImageToPhotoAlbum:(UIImage*)savedImage {
-    
-    UIImageWriteToSavedPhotosAlbum(savedImage, self, @selector(image:didFinishSavingWithError:contextInfo:), NULL);
-}
-
-// 指定回调方法
-- (void)image:(UIImage *)image didFinishSavingWithError:(NSError *)error contextInfo:(void *)contextInfo
-
-{
-    NSString *msg = nil ;
-    if(error != NULL){
-        msg = @"保存图片失败" ;
-    }else{
-        msg = @"保存图片成功" ;
-    }
-    [self alertWithTitle:@"保存图片结果提示" message:msg OKTitle:@"确定" isNeedCancel:NO cancelSEL:nil handle:nil];
 }
 
 
-- (void)flashButtonClick:(UIButton *)sender {
-    
-    AVCaptureDevice *device = [AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo];
-    
-    AVCapturePhotoSettings *setting = [AVCapturePhotoSettings photoSettings];
-
-//    device.flashMode 使用 setting.flashMode 代替
-    
-    //修改前必须先锁定
-    [device lockForConfiguration:nil];
-    //必须判定是否有闪光灯，否则如果没有闪光灯会崩溃
-    if ([device hasFlash]) {
-        
-        if (kSystemVersion < 10.0) {
-            if (device.flashMode == AVCaptureFlashModeOff) {
-                device.flashMode = AVCaptureFlashModeOn;
-                self.flashLabel.text = @"打开";
-            } else if (device.flashMode == AVCaptureFlashModeOn) {
-                device.flashMode = AVCaptureFlashModeAuto;
-                self.flashLabel.text = @"自动";
-            } else if (device.flashMode == AVCaptureFlashModeAuto) {
-                device.flashMode = AVCaptureFlashModeOff;
-                self.flashLabel.text = @"关闭";
-            }
-        } else {
-            if (setting.flashMode == AVCaptureFlashModeOff) {
-                setting.flashMode = AVCaptureFlashModeOn;
-                self.flashLabel.text = @"打开";
-            } else if (setting.flashMode == AVCaptureFlashModeOn) {
-                setting.flashMode = AVCaptureFlashModeAuto;
-                self.flashLabel.text = @"自动";
-            } else if (setting.flashMode == AVCaptureFlashModeAuto) {
-                setting.flashMode = AVCaptureFlashModeOff;
-                self.flashLabel.text = @"关闭";
-            }
-        }
-        
-    } else {
-        NSLog(@"设备不支持闪光灯");
-    }
-    [device unlockForConfiguration];
-}
-
-//缩放手势 用于调整焦距
-- (void)handlePinchGesture:(UIPinchGestureRecognizer *)recognizer{
-    
-    BOOL allTouchesAreOnThePreviewLayer = YES;
-    NSUInteger numTouches = [recognizer numberOfTouches], i;
-    for ( i = 0; i < numTouches; ++i ) {
-        CGPoint location = [recognizer locationOfTouch:i inView:self.view];
-        CGPoint convertedLocation = [self.previewLayer convertPoint:location fromLayer:self.previewLayer.superlayer];
-        if ( ! [self.previewLayer containsPoint:convertedLocation] ) {
-            allTouchesAreOnThePreviewLayer = NO;
-            break;
-        }
-    }
-    
-    if ( allTouchesAreOnThePreviewLayer ) {
-        
-        self.effectiveScale = self.beginGestureScale * recognizer.scale;
-        if (self.effectiveScale < 1.0){
-            self.effectiveScale = 1.0;
-        }
-        
-        CGFloat maxScaleAndCropFactor = [[(kSystemVersion < 10.0 ? self.stillImageOutput : self.photoOutput) connectionWithMediaType:AVMediaTypeVideo] videoMaxScaleAndCropFactor];
-        
-        if (self.effectiveScale > maxScaleAndCropFactor)
-            self.effectiveScale = maxScaleAndCropFactor;
-        
-        [CATransaction begin];
-        [CATransaction setAnimationDuration:.025];
-        [self.previewLayer setAffineTransform:CGAffineTransformMakeScale(self.effectiveScale, self.effectiveScale)];
-        [CATransaction commit];
-    }
-}
 /**
  *  绘制带水印的图片
  */
@@ -770,7 +706,7 @@
     [image drawInRect:rect];
     
     /** 顶部蒙版 */
-    CGRect rectTopMask = CGRectMake(0, CGRectGetMaxY(self.topBlackView.frame), kScreenWidth, 100);
+    CGRect rectTopMask = CGRectMake(0, 0, kScreenWidth, 100);
     UIImage *imageTopMask = [UIImage imageNamed:@"markTopMView"];
     [imageTopMask drawInRect:rectTopMask];
     
@@ -789,7 +725,7 @@
     UIImage *imageBottomMask = [UIImage imageNamed:@"markBottomMView"];
     [imageBottomMask drawInRect:rectBottomMask];
     
-    /** 盯盯logo */
+    /** logo */
     UIImage *logo = [UIImage imageNamed:@"markLogo"];
     [logo drawInRect:CGRectMake(kScreenWidth - 103, kScreenHeight - 70, 83,20)];
     
@@ -811,11 +747,30 @@
 }
 
 
+#pragma mark ---- public method
 - (CGFloat)calculateRowWidth:(NSString *)string fontSize:(CGFloat)fontSize fontHeight:(CGFloat) fontHeight{
     NSDictionary *dic = @{NSFontAttributeName:[UIFont systemFontOfSize:fontSize]};  //指定字号
     CGRect rect = [string boundingRectWithSize:CGSizeMake(0, fontHeight)/*计算宽度时要确定高度*/ options:NSStringDrawingUsesLineFragmentOrigin |
                    NSStringDrawingUsesFontLeading attributes:dic context:nil];
     return rect.size.width;
+}
+
+-(int)currentIntTime {
+    NSDateFormatter *formatter0 = [[NSDateFormatter alloc]init];
+    [formatter0 setDateFormat:@"HH"];
+    NSString *str = [formatter0 stringFromDate:[NSDate date]];
+    int time = [str intValue];
+    return time;
+}
+
+-(BOOL)isTwelveMechanism {
+    //获取系统是24小时制或者12小时制
+    NSString *formatStringForHours = [NSDateFormatter dateFormatFromTemplate:@"j" options:0 locale:[NSLocale currentLocale]];
+    NSRange containsARange = [formatStringForHours rangeOfString:@"a"];
+    BOOL isTwelveMechanism = containsARange.location != NSNotFound;
+    
+    /** isTwelveMechanism = YES 12小时制，否则是24小时制 */
+    return isTwelveMechanism;
 }
 
 /**
@@ -833,11 +788,11 @@
     return [weekdays objectAtIndex:theComponents.weekday];
 }
 
-- (void)alertWithTitle:(NSString *)title message:(NSString *)message OKTitle:(NSString *)okTitle isNeedCancel:(BOOL)isNeedCancel cancelSEL:(void (^)())cancelSEL handle:(void(^)())handler {
+- (void)alertWithTitle:(NSString *)title message:(NSString *)message OKTitle:(NSString *)okTitle isNeedCancel:(BOOL)isNeedCancel cancelHandler:(void (^)())cancelHandler handle:(void(^)())handler {
     UIAlertController *alertController = [UIAlertController alertControllerWithTitle:title message:message preferredStyle:(UIAlertControllerStyleAlert)];
     UIAlertAction *action = [UIAlertAction actionWithTitle:okTitle style:(UIAlertActionStyleDefault) handler:handler];
     if (isNeedCancel) {
-        UIAlertAction *cancel = [UIAlertAction actionWithTitle:@"取消" style:(UIAlertActionStyleDefault) handler:cancelSEL];
+        UIAlertAction *cancel = [UIAlertAction actionWithTitle:@"取消" style:(UIAlertActionStyleDefault) handler:cancelHandler];
         [alertController addAction:cancel];
     }
     
@@ -845,5 +800,41 @@
     [self presentViewController:alertController animated:YES completion:nil];
 }
 
+
+-(void)authorizationStatusHandler:(UIImage *)image {
+    // 获取当前App的相册授权状态
+    PHAuthorizationStatus authorizationStatus = [PHPhotoLibrary authorizationStatus];
+    
+    // 判断授权状态
+    if (authorizationStatus == PHAuthorizationStatusAuthorized) {
+        // 如果已经授权, 保存图片
+        [self saveImageToPhotoAlbum:image];
+        
+    } else if (authorizationStatus == PHAuthorizationStatusNotDetermined) { // 如果没决定, 弹出指示框, 让用户选择
+        
+        [PHPhotoLibrary requestAuthorization:^(PHAuthorizationStatus status) {
+            // 如果用户选择授权, 则保存图片
+            if (status == PHAuthorizationStatusAuthorized) {
+                [self saveImageToPhotoAlbum:image];
+            } else {
+                [self alertWithTitle:@"提示"
+                             message:@"您拒绝了访问相册，无法保存图片"
+                             OKTitle:@"确定"
+                        isNeedCancel:NO
+                       cancelHandler:nil
+                              handle:nil];
+            }
+        }];
+        
+    } else {
+        //PHAuthorizationStatusRestricted || PHAuthorizationStatusDenied
+        [self alertWithTitle:@"提示"
+                     message:@"无访问相册权限，请去设置里设置"
+                     OKTitle:@"确定"
+                isNeedCancel:NO
+               cancelHandler:nil
+                      handle:nil];
+    }
+}
 
 @end

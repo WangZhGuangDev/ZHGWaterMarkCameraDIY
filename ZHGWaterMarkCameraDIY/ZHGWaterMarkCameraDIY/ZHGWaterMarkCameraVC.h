@@ -13,7 +13,7 @@
 @protocol ZHGWaterMarkCameraVCDelegate <NSObject>
 
 @optional
--(void)cameraViwe:(ZHGWaterMarkCameraVC *)cameraViwe image:(UIImage *)image;
+-(void)markCameraController:(ZHGWaterMarkCameraVC *)markCameraVC image:(UIImage *)image;
 
 @end
 
@@ -21,5 +21,8 @@
 
 /** 代理 */
 @property (nonatomic, weak) id<ZHGWaterMarkCameraVCDelegate> delegate;
+
+/** 是否需要12小时制处理，default is NO */
+@property (nonatomic, assign) BOOL isTwelveHandle;
 
 @end

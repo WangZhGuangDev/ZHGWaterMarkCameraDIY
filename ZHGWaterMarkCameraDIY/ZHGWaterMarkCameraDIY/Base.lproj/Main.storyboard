@@ -4,7 +4,6 @@
         <adaptation id="fullscreen"/>
     </device>
     <dependencies>
-        <deployment identifier="iOS"/>
         <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="12089"/>
         <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
     </dependencies>
@@ -37,11 +36,11 @@
                         <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
-                            <imageView userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" translatesAutoresizingMaskIntoConstraints="NO" id="Wgi-3G-hO0">
-                                <rect key="frame" x="0.0" y="64" width="375" height="567"/>
+                            <imageView userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="IMG_3378.JPG" translatesAutoresizingMaskIntoConstraints="NO" id="Wgi-3G-hO0">
+                                <rect key="frame" x="15" y="74" width="345" height="16"/>
                             </imageView>
                             <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="mGm-Fo-xka">
-                                <rect key="frame" x="0.0" y="631" width="375" height="36"/>
+                                <rect key="frame" x="0.0" y="100" width="375" height="567"/>
                                 <color key="backgroundColor" red="0.83997372988620689" green="0.98427435957133069" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                 <fontDescription key="fontDescription" type="system" pointSize="20"/>
                                 <state key="normal" title="去相机">
@@ -57,11 +56,11 @@
                             <constraint firstItem="mGm-Fo-xka" firstAttribute="leading" secondItem="8bC-Xf-vdC" secondAttribute="leading" id="9RQ-kO-9L1"/>
                             <constraint firstAttribute="trailing" secondItem="mGm-Fo-xka" secondAttribute="trailing" id="AZo-rQ-lix"/>
                             <constraint firstAttribute="bottom" secondItem="mGm-Fo-xka" secondAttribute="bottom" id="GJ6-0O-DYC"/>
-                            <constraint firstItem="Wgi-3G-hO0" firstAttribute="leading" secondItem="8bC-Xf-vdC" secondAttribute="leading" id="N4i-OC-Xa7"/>
-                            <constraint firstItem="mGm-Fo-xka" firstAttribute="top" secondItem="Wgi-3G-hO0" secondAttribute="bottom" id="PSi-Jq-75x"/>
-                            <constraint firstItem="Wgi-3G-hO0" firstAttribute="top" secondItem="y3c-jy-aDJ" secondAttribute="bottom" id="ShC-nz-9ox"/>
-                            <constraint firstAttribute="trailing" secondItem="Wgi-3G-hO0" secondAttribute="trailing" id="rIZ-KL-OiJ"/>
-                            <constraint firstItem="mGm-Fo-xka" firstAttribute="top" secondItem="Wgi-3G-hO0" secondAttribute="bottom" id="vIc-e5-IGM"/>
+                            <constraint firstItem="Wgi-3G-hO0" firstAttribute="leading" secondItem="8bC-Xf-vdC" secondAttribute="leading" constant="15" id="N4i-OC-Xa7"/>
+                            <constraint firstItem="mGm-Fo-xka" firstAttribute="top" secondItem="Wgi-3G-hO0" secondAttribute="bottom" constant="10" id="PSi-Jq-75x"/>
+                            <constraint firstItem="Wgi-3G-hO0" firstAttribute="top" secondItem="y3c-jy-aDJ" secondAttribute="bottom" constant="10" id="ShC-nz-9ox"/>
+                            <constraint firstAttribute="trailing" secondItem="Wgi-3G-hO0" secondAttribute="trailing" constant="15" id="rIZ-KL-OiJ"/>
+                            <constraint firstItem="mGm-Fo-xka" firstAttribute="top" secondItem="Wgi-3G-hO0" secondAttribute="bottom" constant="10" id="vIc-e5-IGM"/>
                         </constraints>
                     </view>
                     <navigationItem key="navigationItem" title="测试" id="Jec-8I-tlM"/>
@@ -74,4 +73,7 @@
             <point key="canvasLocation" x="77.599999999999994" y="138.98050974512745"/>
         </scene>
     </scenes>
+    <resources>
+        <image name="IMG_3378.JPG" width="16" height="16"/>
+    </resources>
 </document>
