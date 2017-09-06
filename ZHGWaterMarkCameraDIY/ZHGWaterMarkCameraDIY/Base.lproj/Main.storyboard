@@ -37,11 +37,14 @@
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <imageView userInteractionEnabled="NO" contentMode="scaleToFill" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="IMG_3378.JPG" translatesAutoresizingMaskIntoConstraints="NO" id="Wgi-3G-hO0">
-                                <rect key="frame" x="15" y="74" width="345" height="16"/>
+                                <rect key="frame" x="15" y="74" width="345" height="543"/>
                             </imageView>
                             <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="mGm-Fo-xka">
-                                <rect key="frame" x="0.0" y="100" width="375" height="567"/>
+                                <rect key="frame" x="0.0" y="627" width="375" height="40"/>
                                 <color key="backgroundColor" red="0.83997372988620689" green="0.98427435957133069" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="40" id="oRu-pO-UC5"/>
+                                </constraints>
                                 <fontDescription key="fontDescription" type="system" pointSize="20"/>
                                 <state key="normal" title="去相机">
                                     <color key="titleColor" red="1" green="0.1102155958" blue="0.2030332346" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>

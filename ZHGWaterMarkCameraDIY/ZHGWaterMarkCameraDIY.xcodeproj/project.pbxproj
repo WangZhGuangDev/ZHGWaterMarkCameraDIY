@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3E3E42321F5FBDB80073BDC1 /* Untitled.gif in Resources */ = {isa = PBXBuildFile; fileRef = 3E3E42311F5FBDB80073BDC1 /* Untitled.gif */; };
 		3E85C4D81F5E31BC00FE129C /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 3E85C4D71F5E31BC00FE129C /* main.m */; };
 		3E85C4DB1F5E31BC00FE129C /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 3E85C4DA1F5E31BC00FE129C /* AppDelegate.m */; };
 		3E85C4DE1F5E31BC00FE129C /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 3E85C4DD1F5E31BC00FE129C /* ViewController.m */; };
@@ -36,6 +37,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		3E3E42311F5FBDB80073BDC1 /* Untitled.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = Untitled.gif; sourceTree = "<group>"; };
 		3E85C4D31F5E31BC00FE129C /* ZHGWaterMarkCameraDIY.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ZHGWaterMarkCameraDIY.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3E85C4D71F5E31BC00FE129C /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		3E85C4D91F5E31BC00FE129C /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
@@ -81,6 +83,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		3E3E42301F5FBD900073BDC1 /* GifPicture */ = {
+			isa = PBXGroup;
+			children = (
+				3E3E42311F5FBDB80073BDC1 /* Untitled.gif */,
+			);
+			path = GifPicture;
+			sourceTree = "<group>";
+		};
 		3E85C4CA1F5E31BC00FE129C = {
 			isa = PBXGroup;
 			children = (
@@ -104,6 +114,7 @@
 		3E85C4D51F5E31BC00FE129C /* ZHGWaterMarkCameraDIY */ = {
 			isa = PBXGroup;
 			children = (
+				3E3E42301F5FBD900073BDC1 /* GifPicture */,
 				3E85C4D91F5E31BC00FE129C /* AppDelegate.h */,
 				3E85C4DA1F5E31BC00FE129C /* AppDelegate.m */,
 				3E85C4DC1F5E31BC00FE129C /* ViewController.h */,
@@ -255,6 +266,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				3E85C4E61F5E31BC00FE129C /* LaunchScreen.storyboard in Resources */,
+				3E3E42321F5FBDB80073BDC1 /* Untitled.gif in Resources */,
 				3E85C4E31F5E31BC00FE129C /* Assets.xcassets in Resources */,
 				3E85C4E11F5E31BC00FE129C /* Main.storyboard in Resources */,
 			);
@@ -526,6 +538,7 @@
 				3E85C5021F5E31BD00FE129C /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		3E85C5031F5E31BD00FE129C /* Build configuration list for PBXNativeTarget "ZHGWaterMarkCameraDIYTests" */ = {
 			isa = XCConfigurationList;
@@ -534,6 +547,7 @@
 				3E85C5051F5E31BD00FE129C /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		3E85C5061F5E31BD00FE129C /* Build configuration list for PBXNativeTarget "ZHGWaterMarkCameraDIYUITests" */ = {
 			isa = XCConfigurationList;
@@ -542,6 +556,7 @@
 				3E85C5081F5E31BD00FE129C /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
